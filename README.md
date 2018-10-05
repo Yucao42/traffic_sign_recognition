@@ -29,3 +29,7 @@ python evaluate.py --data [data_dir] --model [model_file]
 ```
 
 That generates a file `gtsrb_kaggle.csv` that you can upload to the private kaggle competition https://www.kaggle.com/c/nyu-cv-fall-2017/ to get onto the leaderboard.
+
+## UPDATES
+
+1. 85% for 10 epochs by the raw code.
