@@ -13,7 +13,7 @@ parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
+parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
@@ -45,14 +45,21 @@ val_loader = torch.utils.data.DataLoader(
 from model import Net
 model = Net()
 
+model.load_state_dict(torch.load('model_latest.pth'))
+#model.load_state_dict(torch.load(['model_latest.pth'])['state_dict'])
+
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+scheduler = optim.lr_scheduler.StepLR(optimizer, 7)
+device = torch.device('cuda:0')
+model.to(device)
 
 def train(epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
         data, target = Variable(data), Variable(target)
-        optimizer.zero_grad()
-        output = model(data)
+        optimizer.zero_grad() 
+        output = model(data) 
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
@@ -66,6 +73,7 @@ def validation():
     validation_loss = 0
     correct = 0
     for data, target in val_loader:
+        data, target = data.to(device), target.to(device)
         data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
@@ -82,5 +90,6 @@ for epoch in range(1, args.epochs + 1):
     train(epoch)
     validation()
     model_file = 'model_' + str(epoch) + '.pth'
+    model_file = 'model_latest' + '.pth'
     torch.save(model.state_dict(), model_file)
     print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
