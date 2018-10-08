@@ -1,1 +1,1 @@
-python3 main.py --load --step 10 --batch-size 256 
+python3 main.py  --step 25 --batch-size 256 --lr 0.01 --name batch_256
