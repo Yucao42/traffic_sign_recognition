@@ -17,12 +17,15 @@ parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
+parser.add_argument('--step', type=int, default=100, metavar='STEP',
+                    help='steo (default: 100)')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                     help='SGD momentum (default: 0.5)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--load', action='store_true', default=False)
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
@@ -45,24 +48,26 @@ val_loader = torch.utils.data.DataLoader(
 from model import Net
 model = Net()
 
-model.load_state_dict(torch.load('model_latest.pth'))
+if args.load:
+    model.load_state_dict(torch.load('model_latest.pth'))
 #model.load_state_dict(torch.load(['model_latest.pth'])['state_dict'])
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-scheduler = optim.lr_scheduler.StepLR(optimizer, 7)
+scheduler = optim.lr_scheduler.StepLR(optimizer, 10)
 device = torch.device('cuda:0')
-model.to(device)
+#model.to(device)
 
 def train(epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
+        #data, target = data.to(device), target.to(device)
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad() 
         output = model(data) 
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
+        #scheduler.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
@@ -73,7 +78,7 @@ def validation():
     validation_loss = 0
     correct = 0
     for data, target in val_loader:
-        data, target = data.to(device), target.to(device)
+        #data, target = data.to(device), target.to(device)
         data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
@@ -88,6 +93,7 @@ def validation():
 
 for epoch in range(1, args.epochs + 1):
     train(epoch)
+    scheduler.step()
     validation()
     model_file = 'model_' + str(epoch) + '.pth'
     model_file = 'model_latest' + '.pth'
