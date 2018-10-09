@@ -2,6 +2,7 @@ from __future__ import print_function
 import argparse
 import torch
 import torch.nn as nn
+from IPython import embed
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
@@ -11,13 +12,13 @@ import datetime as dt
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch GTSRB example')
-parser.add_argument('--net', type=str, default='resnet18', metavar='NET',
+parser.add_argument('--net', type=str, default='resnet50', metavar='NET',
                     help="Name of the network module")
 parser.add_argument('--name', type=str, default='smallbatch', metavar='N',
                     help="Name of the module")
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -33,7 +34,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--load', action='store_true', default=False)
+parser.add_argument('--load', type=str)
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
@@ -41,10 +42,6 @@ torch.manual_seed(args.seed)
 from data import initialize_data, data_transforms # data.py in the same folder
 initialize_data(args.data) # extracts the zip files, makes a validation set
 
-train_loader = torch.utils.data.DataLoader(
-    datasets.ImageFolder(args.data + '/train_images',
-                         transform=data_transforms),
-    batch_size=args.batch_size, shuffle=True, num_workers=4)
 val_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/val_images',
                          transform=data_transforms),
@@ -60,60 +57,43 @@ if 'resnet18' in args.net:
     model = resnet.resnet18(False, dp = args.dp)
 
 if args.load:
-    model.load_state_dict(torch.load('model_latest' + args.name + '.pth'))
+    model.load_state_dict(torch.load(args.load))
 #model.load_state_dict(torch.load(['model_latest.pth'])['state_dict'])
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 scheduler = optim.lr_scheduler.StepLR(optimizer, args.step)
 device = torch.device('cuda:0')
 model.to(device)
-
-def train(epoch):
-    model.train()
-    correct = 0
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        data, target = Variable(data), Variable(target)
-        optimizer.zero_grad() 
-        #output = model(data) 
-        output = F.log_softmax(model(data))
-        loss = F.nll_loss(output, target)
-        loss.backward()
-        optimizer.step()
-        pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-        
-        #scheduler.step()
-        if batch_idx % args.log_interval == 0:
-            print(dt.datetime.now(), 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} ({:.0f}%)'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data[0], correct, args.log_interval * len(data), 100. * correct / (args.log_interval * len(data) )))
-            correct = 0;
+wrongs = {}
+totals = {}
+for i in range(43):
+    wrongs[i] = 0
+    totals[i] = 0
 
 def validation():
     model.eval()
     validation_loss = 0
     correct = 0
-    for data, target in val_loader:
+    for idx, (data, target) in enumerate( val_loader):
         data, target = data.to(device), target.to(device)
         data, target = Variable(data, volatile=True), Variable(target)
         output = F.log_softmax(model(data))
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+        res = pred.eq(target.data.view_as(pred)).cpu()
+        for i in range(len(res)):
+            if res[i] == 0:
+                wrongs[int(target[i])] = wrongs[int(target[i])] + 1
+            totals[int(target[i])] = totals[int(target[i])] + 1
 
 
     validation_loss /= len(val_loader.dataset)
+    print( wrongs )
+    embed()
     print(dt.datetime.now(), '\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         validation_loss, correct, len(val_loader.dataset),
         100. * correct / len(val_loader.dataset)))
 
 
-for epoch in range(1, args.epochs + 1):
-    train(epoch)
-    scheduler.step()
-    model_file = 'model_' + str(epoch) + '.pth'
-    model_file = 'model_latest' + args.name +  '.pth'
-    torch.save(model.state_dict(), model_file)
-    print(dt.datetime.now(), '\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
-    validation()
+validation()

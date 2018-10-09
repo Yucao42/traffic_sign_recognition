@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
+import torch.nn.functional as F
 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -94,8 +95,9 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=43):
+    def __init__(self, block, layers, num_classes=43, dp=0.5):
         self.inplanes = 64
+        self.dp = dp
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
@@ -146,6 +148,7 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
+        x = F.dropout(x, p=self.dp, training=self.training)
         x = self.fc(x)
 
         return x
@@ -163,13 +166,7 @@ def resnet18(pretrained=False, **kwargs):
             model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
         except:
             print('Last dimension size mismatch!')
-            pretrained_file = '~/.torch/models/' + hodel_urls['resnet18'].strip[-1] 
-            for k,v in raw_dict.items():
-                if 'fc' in k:
-                    continue;
-                if isinstance(v, torch.nn.parameter.Parameter):
-                    v = v.data
-                    state_dict[k].copy_(v)
+            
     return model
 
 
@@ -185,13 +182,7 @@ def resnet34(pretrained=False, **kwargs):
             model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
         except:
             print('Last dimension size mismatch!')
-            pretrained_file = '~/.torch/models/' + hodel_urls['resnet34'].strip[-1] 
-            for k,v in raw_dict.items():
-                if 'fc' in k:
-                    continue;
-                if isinstance(v, torch.nn.parameter.Parameter):
-                    v = v.data
-                    state_dict[k].copy_(v)
+
     return model
 
 
