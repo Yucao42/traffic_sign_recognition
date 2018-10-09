@@ -6,6 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from models import resnet
+import datetime as dt
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch GTSRB example')
@@ -19,6 +21,8 @@ parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
+parser.add_argument('--dp', type=float, default=0.5, metavar='DP',
+                    help='dropout ratio (default: 0.5)')
 parser.add_argument('--step', type=int, default=100, metavar='STEP',
                     help='steo (default: 100)')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
@@ -42,12 +46,13 @@ train_loader = torch.utils.data.DataLoader(
 val_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/val_images',
                          transform=data_transforms),
-    batch_size=args.batch_size, shuffle=False, num_workers=1)
+    batch_size=args.batch_size//2, shuffle=False, num_workers=1)
 
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
 from model import Net
-model = Net()
+#model = Net(args.dp)
+model = resnet.resnet50(True)
 
 if args.load:
     model.load_state_dict(torch.load('model_latest.pth'))
@@ -65,7 +70,8 @@ def train(epoch):
         data, target = data.to(device), target.to(device)
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad() 
-        output = model(data) 
+        #output = model(data) 
+        output = F.log_softmax(model(data))
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
@@ -74,7 +80,7 @@ def train(epoch):
         
         #scheduler.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} ({:.0f}%)'.format(
+            print(dt.datetime.now(), 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} ({:.0f}%)'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0], correct, args.log_interval * len(data), 100. * correct / (args.log_interval * len(data) )))
             correct = 0;
@@ -86,23 +92,23 @@ def validation():
     for data, target in val_loader:
         data, target = data.to(device), target.to(device)
         data, target = Variable(data, volatile=True), Variable(target)
-        output = model(data)
+        output = F.log_softmax(model(data))
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
 
     validation_loss /= len(val_loader.dataset)
-    print('\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print(dt.datetime.now(), '\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         validation_loss, correct, len(val_loader.dataset),
         100. * correct / len(val_loader.dataset)))
 
 
 for epoch in range(1, args.epochs + 1):
     train(epoch)
+    torch.save(model.state_dict(), model_file)
     scheduler.step()
     validation()
     model_file = 'model_' + str(epoch) + '.pth'
     model_file = 'model_latest' + args.name +  '.pth'
-    torch.save(model.state_dict(), model_file)
-    print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
+    print(dt.datetime.now(), '\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
