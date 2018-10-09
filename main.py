@@ -42,11 +42,11 @@ initialize_data(args.data) # extracts the zip files, makes a validation set
 train_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/train_images',
                          transform=data_transforms),
-    batch_size=args.batch_size, shuffle=True, num_workers=1)
+    batch_size=args.batch_size, shuffle=True, num_workers=4)
 val_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/val_images',
                          transform=data_transforms),
-    batch_size=args.batch_size//2, shuffle=False, num_workers=1)
+    batch_size=args.batch_size//2, shuffle=False, num_workers=4)
 
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
@@ -106,9 +106,9 @@ def validation():
 
 for epoch in range(1, args.epochs + 1):
     train(epoch)
-    torch.save(model.state_dict(), model_file)
     scheduler.step()
-    validation()
     model_file = 'model_' + str(epoch) + '.pth'
     model_file = 'model_latest' + args.name +  '.pth'
+    torch.save(model.state_dict(), model_file)
     print(dt.datetime.now(), '\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
+    validation()
