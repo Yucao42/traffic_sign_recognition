@@ -53,7 +53,7 @@ model = Net()
 device = torch.device('cuda:0')
 
 try:    
-    model.load_state_dict(torch.load('model_975.pth'))
+    model.load_state_dict(torch.load('model_977.pth'))
 except:
     print("Training from scratch!")
 
