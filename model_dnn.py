@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 nclasses = 43 # GTSRB as 43 classes
 
@@ -15,6 +16,16 @@ class Net(nn.Module):
         self.conv3_drop = nn.Dropout2d()
         self.fc1 = nn.Linear(2250, 300)
         self.fc2 = nn.Linear(300, nclasses)
+
+        # Initilize the parameters
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))

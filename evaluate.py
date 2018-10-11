@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torchvision.datasets as datasets
 
 from data import initialize_data # data.py in the same folder
-from model import Net
+from model_dnn import Net
 
 parser = argparse.ArgumentParser(description='PyTorch GTSRB evaluation script')
 parser.add_argument('--data', type=str, default='data', metavar='D',

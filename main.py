@@ -14,10 +14,14 @@ parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
+parser.add_argument('--step', type=int, default=5, metavar='N',
+                    help='lr decay step (default: 5)')
 parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 30)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
+parser.add_argument('--weight_decay', '-wd', type=float, default=1e-4, metavar='WD',
+                    help='Weight decay (default: 1e-4)')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                     help='SGD momentum (default: 0.5)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -45,15 +49,22 @@ val_loader = torch.utils.data.DataLoader(
 # We define neural net in model.py so that it can be reused by the evaluate.py script
 from model_dnn import Net
 model = Net()
-model.load_state_dict(torch.load('model_30.pth'))
+device = torch.device('cuda:0')
+try:    
+    print("HEY")
+    #model.load_state_dict(torch.load('model_23.pth'))
+except:
+    print("Training from scratch!")
 
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-scheduler = optim.lr_scheduler.StepLR(optimizer, 10)
+model.to(device)
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay = args.weight_decay)
+scheduler = optim.lr_scheduler.StepLR(optimizer, args.step)
 
 def train(epoch):
     model.train()
     correct = 0
     for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
@@ -75,6 +86,8 @@ def validation():
     validation_loss = 0
     correct = 0
     for data, target in val_loader:
+        data, target = data.to(device), target.to(device)
+        data, target = Variable(data), Variable(target)
         data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
