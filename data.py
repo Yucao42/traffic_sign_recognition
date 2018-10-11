@@ -9,7 +9,8 @@ import torchvision.transforms as transforms
 # and normalize them to mean = 0 and standard-deviation = 1 based on statistics collected from
 # the training set
 data_transforms = transforms.Compose([
-    transforms.Scale((32, 32)),
+    transforms.Scale((48, 48)),
+    #transforms.ColorJitter(0.1, 0.1, 0.1),
     transforms.ToTensor(),
     transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629))
 ])
