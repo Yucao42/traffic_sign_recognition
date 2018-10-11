@@ -9,12 +9,25 @@ import torchvision.transforms as transforms
 # and normalize them to mean = 0 and standard-deviation = 1 based on statistics collected from
 # the training set
 data_transforms = transforms.Compose([
-    transforms.Scale((48, 48)),
+    #transforms.Scale((48, 48)),
+    #transforms.RandomAffine(degrees=5, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+    transforms.RandomResizedCrop(48, scale=(0.9, 1), ratio=(0.8, 1.25)),
+    #transforms.RandomResizedCrop(48),
     transforms.ColorJitter(0.1, 0., 0.),
     transforms.ToTensor(),
     transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629))
 ])
 
+
+val_transforms = transforms.Compose([
+    transforms.Scale((48, 48)),
+    #transforms.RandomAffine(degrees=5, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+    #transforms.RandomResizedCrop(48, scale=(0.9, 1), ratio=(0.8, 1.25)),
+    #transforms.RandomResizedCrop(48),
+    #transforms.ColorJitter(0.1, 0., 0.),
+    transforms.ToTensor(),
+    transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629))
+])
 
 def initialize_data(folder):
     train_zip = folder + '/train_images.zip'

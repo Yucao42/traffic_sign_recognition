@@ -8,13 +8,14 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 from datetime import datetime as dt
 
+from IPython import embed
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch GTSRB example')
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--step', type=int, default=5, metavar='N',
+parser.add_argument('--step', type=int, default=10, metavar='N',
                     help='lr decay step (default: 5)')
 parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of epochs to train (default: 30)')
@@ -33,7 +34,7 @@ args = parser.parse_args()
 torch.manual_seed(args.seed)
 
 ### Data Initialization and Loading
-from data import initialize_data, data_transforms # data.py in the same folder
+from data import initialize_data, data_transforms, val_transforms # data.py in the same folder
 initialize_data(args.data) # extracts the zip files, makes a validation set
 
 train_loader = torch.utils.data.DataLoader(
@@ -42,7 +43,7 @@ train_loader = torch.utils.data.DataLoader(
     batch_size=args.batch_size, shuffle=True, num_workers=4)
 val_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/val_images',
-                         transform=data_transforms),
+                         transform=val_transforms),
     batch_size=args.batch_size, shuffle=False, num_workers=8)
 
 ### Neural Network and Optimizer
@@ -50,9 +51,9 @@ val_loader = torch.utils.data.DataLoader(
 from model_dnn import Net
 model = Net()
 device = torch.device('cuda:0')
+
 try:    
-    print("HEY")
-    #model.load_state_dict(torch.load('model_23.pth'))
+    model.load_state_dict(torch.load('model_975.pth'))
 except:
     print("Training from scratch!")
 
@@ -76,9 +77,9 @@ def train(epoch):
 
         #scheduler.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} ({:.0f}%)'.format(
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} '.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data[0], correct, args.log_interval * len(data), 100. * correct / (args.log_interval * len(data) )))
+                100. * batch_idx / len(train_loader), loss.data[0], correct, args.log_interval * len(data)),'({:.2f}%)'.format( float(100.00) * int(correct) * 1.0 / float(args.log_interval * len(data) )) )
             correct = 0;
 
 def validation():
@@ -95,9 +96,9 @@ def validation():
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
     validation_loss /= len(val_loader.dataset)
-    print('\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         validation_loss, correct, len(val_loader.dataset),
-        100. * correct / len(val_loader.dataset)))
+        100. * int(correct) / len(val_loader.dataset)))
 
 
 for epoch in range(1, args.epochs + 1):
