@@ -1,5 +1,7 @@
 *~
 data
+models/*
+shits/*
 *.pyc
 *.pth
 *.csv

@@ -11,25 +11,30 @@ from datetime import datetime as dt
 from IPython import embed
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch GTSRB example')
+parser.add_argument('--name', type=str, default='experiment', metavar='NM',
+                    help="name of the training")
+parser.add_argument('--load', type=str,
+                    help="load previous model to finetune")
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch_size', type=int, default=64, metavar='B',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--step', type=int, default=10, metavar='N',
+parser.add_argument('--step', type=int, default=10, metavar='S', 
                     help='lr decay step (default: 5)')
-parser.add_argument('--epochs', type=int, default=30, metavar='N',
+parser.add_argument('--epochs', type=int, default=45, metavar='N',
                     help='number of epochs to train (default: 30)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
 parser.add_argument('--weight_decay', '-wd', type=float, default=1e-4, metavar='WD',
                     help='Weight decay (default: 1e-4)')
-parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
+parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.5)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 args = parser.parse_args()
+print(args)
 
 torch.manual_seed(args.seed)
 
@@ -52,14 +57,16 @@ from model_dnn import Net
 model = Net()
 device = torch.device('cuda:0')
 
-try:    
-    model.load_state_dict(torch.load('model_977.pth'))
-except:
-    print("Training from scratch!")
+if args.load:
+    try:    
+        model.load_state_dict(torch.load(args.load))
+    except:
+        print("Training from scratch!")
 
 model.to(device)
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay = args.weight_decay)
 scheduler = optim.lr_scheduler.StepLR(optimizer, args.step)
+best_accu = 0
 
 def train(epoch):
     model.train()
@@ -100,11 +107,14 @@ def validation():
         validation_loss, correct, len(val_loader.dataset),
         100. * int(correct) / len(val_loader.dataset)))
 
+    return 100. * int(correct) / len(val_loader.dataset)
 
 for epoch in range(1, args.epochs + 1):
     train(epoch)
-    validation()
+    accu = validation()
     scheduler.step()
-    model_file = 'model_' + str(epoch) + '.pth'
-    torch.save(model.state_dict(), model_file)
-    print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
+    model_file = "models/" + args.name +'/model_' + str(epoch) +'_{:.2f}'.format(accu) + '.pth'
+    if accu > best_accu:
+        best_accu = accu
+        torch.save(model.state_dict(), model_file)
+        print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
