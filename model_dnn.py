@@ -8,6 +8,7 @@ nclasses = 43 # GTSRB as 43 classes
 class Net(nn.Module):
     def __init__(self, no_dp=False):
         super(Net, self).__init__()
+        self.no_dp = no_dp
         self.conv1 = nn.Conv2d(3, 100, kernel_size=7)
         self.bn1 = nn.BatchNorm2d(100)
         self.conv2 = nn.Conv2d(100, 150, kernel_size=4)
@@ -33,7 +34,7 @@ class Net(nn.Module):
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = self.bn1(x)
-        if no_dp:
+        if self.no_dp:
             x = F.relu(F.max_pool2d(self.conv2(x)), 2)
             x = F.relu(F.max_pool2d(self.conv3(x)), 2)
         else:
@@ -43,7 +44,7 @@ class Net(nn.Module):
         x = self.bn2(x)
         x = x.view(-1, 2250)
         x = F.relu(self.fc1(x))
-        if not no_dp:
+        if not self.no_dp:
             x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.log_softmax(x)
