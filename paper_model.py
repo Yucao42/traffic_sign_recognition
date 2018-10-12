@@ -13,7 +13,7 @@ class Net(nn.Module):
         self.bn1 = nn.BatchNorm2d(100)
         self.conv2 = nn.Conv2d(100, 150, kernel_size=4)
         self.conv3 = nn.Conv2d(150, 250, kernel_size=4)
-        self.bn2 = nn.BatchNorm2d(250)
+        #self.bn2 = nn.BatchNorm2d(250)
         if not no_dp:
             self.conv2_drop = nn.Dropout2d()
             self.conv3_drop = nn.Dropout2d()
@@ -41,7 +41,7 @@ class Net(nn.Module):
             x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
             x = F.relu(F.max_pool2d(self.conv3_drop(self.conv3(x)), 2))
 
-        x = self.bn2(x)
+        #x = self.bn2(x)
         x = x.view(-1, 2250)
         x = F.relu(self.fc1(x))
         if not self.no_dp:

@@ -17,6 +17,8 @@ parser.add_argument('--load', type=str,
                     help="load previous model to finetune")
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
+parser.add_argument('--no_dp', action='store_true', default=False,
+                    help="if there is no dropout")
 parser.add_argument('--batch_size', type=int, default=64, metavar='B',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--step', type=int, default=10, metavar='S', 
@@ -53,8 +55,9 @@ val_loader = torch.utils.data.DataLoader(
 
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
-from model_dnn import Net
-model = Net()
+#from model_dnn import Net
+from paper_model import Net
+model = Net(args.no_dp)
 device = torch.device('cuda:0')
 
 if args.load:

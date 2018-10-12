@@ -1,8 +1,8 @@
 set -x
-MODEL="dual_bn_200batch_nodropout"
+MODEL="paper_200batch_nodropout"
 
 mkdir -p models/${MODEL}
-cp ./train.sh models/${MODEL}/
+#cp shell/train.sh models/${MODEL}/
 
 python3 main.py  \
 --name ${MODEL}  \
