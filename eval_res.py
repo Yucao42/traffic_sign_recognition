@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torchvision.datasets as datasets
 
 from data import initialize_data # data.py in the same folder
-from paper_model import Net
+from model import Net
 
 parser = argparse.ArgumentParser(description='PyTorch GTSRB evaluation script')
 parser.add_argument('--data', type=str, default='data', metavar='D',
@@ -23,13 +23,17 @@ parser.add_argument('--outfile', type=str, default='gtsrb_kaggle.csv', metavar='
 args = parser.parse_args()
 
 state_dict = torch.load(args.model)
-model = Net()
+model = resnet.resnet50()
 model.load_state_dict(state_dict)
-model.eval()
 
-from data import val_transforms
+
+device = torch.device('cuda:0')
+model.to(device)
+
+from data import data_transforms
 
 test_dir = args.data + '/test_images'
+model.eval()
 
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
@@ -42,10 +46,13 @@ output_file = open(args.outfile, "w")
 output_file.write("Filename,ClassId\n")
 for f in tqdm(os.listdir(test_dir)):
     if 'ppm' in f:
-        data = val_transforms(pil_loader(test_dir + '/' + f))
+        data = data_transforms(pil_loader(test_dir + '/' + f))
+        data = data.to(device)
         data = data.view(1, data.size(0), data.size(1), data.size(2))
+
         data = Variable(data, volatile=True)
-        output = model(data)
+        #output = F.lomodel(data)
+        output = F.log_softmax(model(data))
         pred = output.data.max(1, keepdim=True)[1]
 
         file_id = f[0:5]

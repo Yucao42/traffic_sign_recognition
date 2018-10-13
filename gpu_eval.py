@@ -17,15 +17,20 @@ parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
 parser.add_argument('--model', type=str, metavar='M',
                     help="the model file to be evaluated. Usually it is of the form model_X.pth")
-parser.add_argument('--outfile', type=str, default='gtsrb_kaggle.csv', metavar='D',
+parser.add_argument('--outfile', type=str, default='gpu_gtsrb_kaggle.csv', metavar='D',
                     help="name of the output csv file")
 
 args = parser.parse_args()
 
 state_dict = torch.load(args.model)
+device = torch.device('cuda:0')
+
 model = Net()
+
 model.load_state_dict(state_dict)
 model.eval()
+
+model.to(device)
 
 from data import val_transforms
 
@@ -43,10 +48,12 @@ output_file.write("Filename,ClassId\n")
 for f in tqdm(os.listdir(test_dir)):
     if 'ppm' in f:
         data = val_transforms(pil_loader(test_dir + '/' + f))
+
         data = data.view(1, data.size(0), data.size(1), data.size(2))
+        data = data.to(device)
         data = Variable(data, volatile=True)
         output = model(data)
-        pred = output.data.max(1, keepdim=True)[1]
+        pred = output.data.cpu().max(1, keepdim=True)[1]
 
         file_id = f[0:5]
         output_file.write("%s,%d\n" % (file_id, pred))

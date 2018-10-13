@@ -63,6 +63,7 @@ device = torch.device('cuda:0')
 if args.load:
     try:    
         model.load_state_dict(torch.load(args.load))
+        print("Load sucessfully !", args.load)
     except:
         print("Training from scratch!")
 
