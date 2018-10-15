@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 import math
 
 nclasses = 43 # GTSRB as 43 classes
@@ -54,8 +55,8 @@ class Net(nn.Module):
         self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
     # Spatial transformer network forward function
-    def stn(self, x):
-        xs = self.localization(x)
+    def stn(self, x, x1):
+        xs = self.localization(x1)
         xs = xs.view(-1, 10 * 3 * 3)
         theta = self.fc_loc(xs)
         theta = theta.view(-1, 2, 3)
@@ -66,7 +67,8 @@ class Net(nn.Module):
         return x
 
     def forward(self, x):
-        x = self.stn(x)
+        x1 = F.upsample(x, size=(28, 28), mode='bilinear')
+        x = self.stn(x, x1)
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = self.bn1(x)
         if self.no_dp:

@@ -56,7 +56,7 @@ val_loader = torch.utils.data.DataLoader(
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
 #from model_dnn import Net
-from paper_model import Net
+from paper_stn import Net
 model = Net(args.no_dp)
 device = torch.device('cuda:0')
 
