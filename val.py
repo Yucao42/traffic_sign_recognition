@@ -7,6 +7,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 from datetime import datetime as dt
+from tqdm import tqdm
+import os
 
 from IPython import embed
 # Training settings
@@ -51,7 +53,7 @@ train_loader = torch.utils.data.DataLoader(
 val_loader = torch.utils.data.DataLoader(
     datasets.ImageFolder(args.data + '/val_images',
                          transform=val_transforms),
-    batch_size=args.batch_size, shuffle=False, num_workers=8)
+    batch_size=1, shuffle=False, num_workers=8)
 
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
@@ -65,39 +67,26 @@ if args.load:
         model.load_state_dict(torch.load(args.load))
         print("Load sucessfully !", args.load)
     except:
+        raise RuntimeError('No module loaded!')
         print("Training from scratch!")
 
 model.to(device)
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay = args.weight_decay)
 scheduler = optim.lr_scheduler.StepLR(optimizer, args.step)
 best_accu = 0
+wrongs = []
+img_dir = './data/test_images/'
+imgs = os.listdir('./data/test_images')
+wrongs_dir = './wrongs/' + args.name + '/'
+os.system('mkdir -p '+ wrongs_dir)
 
-def train(epoch):
-    model.train()
-    correct = 0
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        data, target = Variable(data), Variable(target)
-        optimizer.zero_grad()
-        output = model(data)
-        pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-        loss = F.nll_loss(output, target)
-        loss.backward()
-        optimizer.step()
-        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-
-        #scheduler.step()
-        if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, Accuracy: {}/{} '.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data[0], correct, args.log_interval * len(data)),'({:.2f}%)'.format( float(100.00) * int(correct) * 1.0 / float(args.log_interval * len(data) )) )
-            correct = 0;
 
 def validation():
     model.eval()
     validation_loss = 0
     correct = 0
-    for data, target in val_loader:
+    count = 0
+    for idx, (data, target) in tqdm( enumerate(val_loader)):
         data, target = data.to(device), target.to(device)
         data, target = Variable(data), Variable(target)
         data, target = Variable(data, volatile=True), Variable(target)
@@ -105,6 +94,17 @@ def validation():
         validation_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+        k = pred.eq(target.data.view_as(pred)).cpu().sum()
+
+        if(k == 0):
+            count = count + 1
+            wrongs.append(imgs[idx])
+            print(idx, " wrong at ", imgs[idx])
+            os.system('cp {} {}'.format(img_dir + imgs[idx], wrongs_dir + imgs[idx]))
+            print('Done cp {} {}'.format(img_dir + imgs[idx], wrongs_dir + imgs[idx]))
+    print("wrongs ", count)
+
+
 
     validation_loss /= len(val_loader.dataset)
     print('\nValidation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
@@ -113,12 +113,8 @@ def validation():
 
     return 100. * int(correct) / len(val_loader.dataset)
 
-for epoch in range(1, args.epochs + 1):
-    train(epoch)
-    accu = validation()
-    scheduler.step()
-    model_file = "models/" + args.name +'/model_' + str(epoch) +'_{:.2f}'.format(accu) + '.pth'
-    if accu > best_accu:
-        best_accu = accu
-        torch.save(model.state_dict(), model_file)
-        print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')
+
+accu = validation()
+
+print("Accuracy: ", accu)
+

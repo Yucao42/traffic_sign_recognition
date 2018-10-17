@@ -54,11 +54,46 @@ class Net(nn.Module):
         self.fc_loc[2].weight.data.zero_()
         self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
+        # STN2 channel matching
+        # Spatial transformer localization-network input 21 * 21
+        self.localization2 = nn.Sequential(
+            nn.MaxPool2d(2, stride=2),
+            nn.ReLU(True),
+            nn.Conv2d(100, 150, kernel_size=3),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(150, 200, kernel_size=3),
+            nn.MaxPool2d(2, stride=2)
+        )
+
+        # Regressor for the 3 * 2 affine matrix
+        self.fc_loc2 = nn.Sequential(
+            nn.Linear(200, 300),
+            nn.ReLU(True),
+            nn.Linear(300, 3 * 2)
+        )
+
+        # Initialize the weights/bias with identity transformation
+        self.fc_loc2[2].weight.data.zero_()
+        self.fc_loc2[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+
     # Spatial transformer network forward function
     def stn(self, x, x1):
         xs = self.localization(x1)
         xs = xs.view(-1, 10 * 3 * 3)
         theta = self.fc_loc(xs)
+        theta = theta.view(-1, 2, 3)
+
+        grid = F.affine_grid(theta, x.size())
+        x = F.grid_sample(x, grid)
+
+        return x
+
+    # Spatial transformer network forward function
+    def stn2(self, x, x1):
+        xs = self.localization2(x1)
+        xs = xs.view(-1, 200)
+        theta = self.fc_loc2(xs)
         theta = theta.view(-1, 2, 3)
 
         grid = F.affine_grid(theta, x.size())
@@ -74,6 +109,9 @@ class Net(nn.Module):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = self.bn1(x)
 
+        # STN 2 
+        x = self.stn2(x, x)
+
         if self.no_dp:
             x = F.relu(F.max_pool2d(self.conv2(x), 2))
             x = F.relu(F.max_pool2d(self.conv3(x), 2))
@@ -85,6 +123,6 @@ class Net(nn.Module):
         x = x.view(-1, 2250)
         x = F.relu(self.fc1(x))
         if not self.no_dp:
-            x = F.dropout(x, p=0.5, training=self.training)
+            x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.log_softmax(x)
