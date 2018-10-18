@@ -10,13 +10,13 @@ import torchvision.transforms as transforms
 # the training set
 data_transforms = transforms.Compose([
 
-    #transforms.RandomAffine(degrees=5, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+    transforms.RandomAffine(degrees=10, translate=(0.1, 0.1), scale=(0.9, 1.1)),
     #transforms.RandomResizedCrop(48, ratio=(0.8, 1.25)),
 
     transforms.RandomResizedCrop(48, scale=(0.9, 1), ratio=(0.8, 1.25)),
     #transforms.RandomResizedCrop(48),
     #transforms.ColorJitter(0.1, 0.1, 0.1),
-    transforms.ColorJitter(0.1, 0., 0.),
+    transforms.ColorJitter(0.1, 0.1, 0.1),
 
     transforms.ToTensor(),
     transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629))

@@ -56,7 +56,7 @@ val_loader = torch.utils.data.DataLoader(
 ### Neural Network and Optimizer
 # We define neural net in model.py so that it can be reused by the evaluate.py script
 #from model_dnn import Net
-from paper_stn import Net
+from paper_conv0_stn import Net
 model = Net(args.no_dp)
 device = torch.device('cuda:0')
 
@@ -118,7 +118,7 @@ for epoch in range(1, args.epochs + 1):
     accu = validation()
     scheduler.step()
     model_file = "models/" + args.name +'/model_' + str(epoch) +'_{:.2f}'.format(accu) + '.pth'
-    if accu > best_accu:
+    if accu > best_accu and accu > 98:
         best_accu = accu
         torch.save(model.state_dict(), model_file)
         print('\nSaved model to ' + model_file + '. You can run `python evaluate.py ' + model_file + '` to generate the Kaggle formatted csv file')

@@ -11,7 +11,7 @@ import torchvision.datasets as datasets
 
 from data import initialize_data # data.py in the same folder
 #from paper_model import Net
-from paper_stn import Net
+from paper_2stn import Net
 
 parser = argparse.ArgumentParser(description='PyTorch GTSRB evaluation script')
 parser.add_argument('--data', type=str, default='data', metavar='D',
