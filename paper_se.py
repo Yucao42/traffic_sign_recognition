@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import math
+from attention import SELayer
 
 nclasses = 43 # GTSRB as 43 classes
 
@@ -42,9 +43,7 @@ class Net(nn.Module):
             nn.ReLU(True),
             nn.Conv2d(8, 10, kernel_size=5),
             nn.MaxPool2d(2, stride=2),
-            nn.ReLU(True)
-        )
-
+            nn.ReLU(True)) 
         # Regressor for the 3 * 2 affine matrix
         self.fc_loc = nn.Sequential(
             nn.Linear(10 * 3 * 3, 32),
@@ -79,6 +78,9 @@ class Net(nn.Module):
         self.fc_loc2[2].weight.data.zero_()
         self.fc_loc2[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
+        # SE layer
+        self.se = SELayer(250)
+    
     # Spatial transformer network forward function
     def stn(self, x, x1):
         xs = self.localization(x1)
@@ -119,10 +121,14 @@ class Net(nn.Module):
             x = F.relu(F.max_pool2d(self.conv3(x), 2))
         else:
             x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-            #x = self.bn3(x)
+            x = self.bn3(x)
             x = F.relu(F.max_pool2d(self.conv3_drop(self.conv3(x)), 2))
 
         x = self.bn2(x)
+
+        # SE layer (self attention)
+        x = self.se(x)
+
         x = x.view(-1, 2250)
         x = F.relu(self.fc1(x))
         if not self.no_dp:
